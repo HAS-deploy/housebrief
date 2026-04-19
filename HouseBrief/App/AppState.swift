@@ -32,8 +32,10 @@ final class AppState: ObservableObject {
     func finishOnboarding(email: String, phone: String) {
         contactEmail = email
         contactPhone = phone
+        hasFinishedOnboarding = true
         defaults.set(email, forKey: Keys.email)
         defaults.set(phone, forKey: Keys.phone)
+        defaults.set(true, forKey: Keys.onboardingDone)
     }
 
     func completeAuthentication(userId: String) {

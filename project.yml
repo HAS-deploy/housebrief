@@ -39,8 +39,6 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSCameraUsageDescription: Take photos of your property to include in your submission.
-        NSPhotoLibraryUsageDescription: Attach photos of your property to include in your submission.
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:

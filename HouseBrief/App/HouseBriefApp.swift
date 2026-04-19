@@ -8,7 +8,6 @@ struct HouseBriefApp: App {
         let schema = Schema([
             PropertySubmission.self,
             FollowUpAnswer.self,
-            SubmissionPhoto.self,
             MessageThread.self,
             MessageItem.self,
         ])

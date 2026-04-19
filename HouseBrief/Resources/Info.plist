@@ -24,10 +24,6 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>Take photos of your property to include in your submission.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Attach photos of your property to include in your submission.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

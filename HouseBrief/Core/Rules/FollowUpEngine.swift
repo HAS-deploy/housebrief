@@ -100,13 +100,8 @@ enum FollowUpEngine {
                 urgencyDelta: urgency, confidenceDelta: confidence, routeToHuman: false)
         }
 
-        if submission.photos.isEmpty && !answered.contains("photos_uploaded") {
-            return FollowUpDecision(
-                nextQuestion: .init(key: "photos_uploaded",
-                                    prompt: "Could you add a few photos — exterior, kitchen, and one room? Helps us form a faster view."),
-                flags: flags, motivationDelta: 0, complexityDelta: 0,
-                urgencyDelta: 0, confidenceDelta: 0, routeToHuman: false)
-        }
+        // (Photos removed from v1 — reintroduce this question when photo
+        // upload ships in v1.1.)
 
         // --- state requires human legal review ---
         let rule = StateRulesEngine.rule(for: submission.stateCode)

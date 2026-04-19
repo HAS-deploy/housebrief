@@ -22,7 +22,7 @@ enum Copy {
 
     // MARK: - Submit
     static let submitHeroTitle = "Tell us about your house."
-    static let submitHeroBody = "A few quick questions and a couple of photos. Our team reviews every submission and follows up directly."
+    static let submitHeroBody = "A few quick questions about the property. Our team reviews every submission and follows up directly."
 
     // MARK: - Disclosures (always visible)
     static let universalDisclosure = """
@@ -55,5 +55,5 @@ enum Copy {
     static let termsURL = URL(string: "https://has-deploy.github.io/housebrief/terms.html")!
     static let supportURL = URL(string: "https://has-deploy.github.io/housebrief/support.html")!
 
-    static let supportEmail = "hello@housebrief.example"  // TODO(acquisition-entity): replace before submit
+    static let supportEmail = "tony@medbillresolve.com"
 }

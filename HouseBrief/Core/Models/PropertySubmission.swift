@@ -117,8 +117,6 @@ final class PropertySubmission {
     var urgencyScore: Int = 0
     var confidenceScore: Int = 0
 
-    @Relationship(deleteRule: .cascade, inverse: \SubmissionPhoto.submission)
-    var photos: [SubmissionPhoto] = []
     @Relationship(deleteRule: .cascade, inverse: \FollowUpAnswer.submission)
     var followUpAnswers: [FollowUpAnswer] = []
 

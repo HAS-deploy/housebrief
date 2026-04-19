@@ -12,7 +12,7 @@ struct SettingsView: View {
                     LabeledContent("Phone") { Text(appState.contactPhone ?? "—") }
                 }
                 Section("About") {
-                    LabeledContent("Version", value: Bundle.main.marketingVersion)
+                    LabeledContent("Version", value: Bundle.main.versionAndBuild)
                     Link("Privacy policy", destination: Copy.privacyPolicyURL)
                     Link("Terms of use", destination: Copy.termsURL)
                     Link("Support", destination: Copy.supportURL)
@@ -52,4 +52,8 @@ extension Bundle {
     var marketingVersion: String {
         (infoDictionary?["CFBundleShortVersionString"] as? String) ?? "1.0"
     }
+    var buildNumber: String {
+        (infoDictionary?["CFBundleVersion"] as? String) ?? "1"
+    }
+    var versionAndBuild: String { "\(marketingVersion) (\(buildNumber))" }
 }
