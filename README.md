@@ -32,6 +32,12 @@ xcodebuild -project HouseBrief.xcodeproj -scheme HouseBrief \
 
 The iOS app is stage-1 standalone with a SwiftData local store. A separate repo (`housebrief-api` — not yet created) holds the Node/Fastify/Postgres/S3 backend + admin dashboard. The follow-up engine in this repo mirrors the server logic for offline demos; server is authoritative when wired up.
 
+## Growth roadmap
+
+Phased plan with explicit gating criteria between phases: see [ROADMAP.md](ROADMAP.md).
+
+TL;DR — Phase 1 consumer intake (now) → Phase 2a stabilize for 60-90 days → Phase 2b attorney review + scaffold buyer portal → Phase 3 open paid buyer signups ($99 / $299 / $1,499 per month tiers) → Phase 4 ops scale → Phase 5 institutional API. Monetization is entirely on the business side; consumer iOS app stays free forever.
+
 ## Compliance sensitivity
 
 This is a regulated corridor. If copy, data flow, state enablement, or contract-assignment logic changes, run:
