@@ -58,6 +58,8 @@ This is the phased plan. Each phase has concrete gating criteria — don't advan
 
 ## Phase 3 — Open buyer portal (months 4-6)
 
+**Business model reminder:** we are selling **contract interests** via assignment (or double-closing where a state has recent wholesaling legislation). The seller is notified in the original purchase agreement that the buyer (us) may assign. The assignment fee is disclosed to the end buyer. We are not marketing the property — we are marketing our contract interest in the property.
+
 **What ships**
 - Invite-only signups open. Paid tiers via Stripe, monthly + annual:
 
@@ -108,6 +110,16 @@ This is the phased plan. Each phase has concrete gating criteria — don't advan
 - **$150k+ MRR** sustained
 - Buyer portal pays for the whole operating company (engineering + acquisitions + compliance)
 
+## Wholesaling hygiene — per-deal rules
+
+These are load-bearing for the "wholesaler-not-broker" defense. Every deal we assign must pass all five:
+
+1. **Binding purchase contract in our name** (not a walk-away option). Real equitable interest is what separates assignment from brokerage.
+2. **Assignment disclosed to the seller** in the original contract — "and/or assigns" on the buyer line, plus a verbal walk-through of what that means.
+3. **Assignment fee disclosed to the end buyer** — they see what the property costs + what the assignment fee is, separately.
+4. **We market the contract, not the property** — every piece of buyer-portal copy says "contract interest under assignment," not "home for sale."
+5. **Double-close in high-sensitivity states** — when a state has recent wholesaling legislation (IL, OK, KS, SC, Philadelphia currently), the acquisition entity closes first and re-sells rather than assigning. The state rules engine flags these and the dispo workflow auto-routes to double-close.
+
 ## What we will NOT do (ever)
 
 These lines are defense-in-depth against being reclassified as a broker / unlicensed wholesaler / unlicensed marketplace:
@@ -116,8 +128,10 @@ These lines are defense-in-depth against being reclassified as a broker / unlice
 - No consumer-facing paid tier on the iOS app.
 - No public-facing listing feed or "browse homes" marketplace view.
 - No buyer-to-seller messaging. Sellers interact only with our acquisitions team.
-- No distributing submissions we haven't placed under contract or obtained assignable rights on.
+- No distributing submissions we haven't placed under a binding purchase contract.
 - No state-by-state expansion without compliance sign-off.
+- No marketing of the **property** to buyers — only marketing of the **contract interest** we hold.
+- No walking away from signed contracts without a real contingency being triggered (preserves equitable-interest framing).
 
 ## Tracking growth
 
