@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct SubmitFlowView: View {
+    @EnvironmentObject private var appState: AppState
     @Environment(\.modelContext) private var context
     @State private var showingWizard = false
 
@@ -26,9 +27,52 @@ struct SubmitFlowView: View {
             .padding(24)
             .navigationTitle("Submit")
             .sheet(isPresented: $showingWizard) {
-                SubmitWizardView { submission in
+                SubmitWizardView(
+                    defaultEmail: appState.contactEmail,
+                    defaultPhone: appState.contactPhone,
+                ) { submission in
+                    // Local-first: persist to SwiftData right away so the user
+                    // sees the submission in My Properties even if the API call
+                    // is slow.
                     context.insert(submission)
                     try? context.save()
+
+                    // Fire API. If it succeeds, keep the returned server id on
+                    // the local record. If it fails, SwiftData record still
+                    // exists and we surface an error.
+                    Task { @MainActor in
+                        do {
+                            let body = APIClient.SubmitBody(
+                                contactEmail: AuthStore.shared.token == nil ? appState.contactEmail : nil,
+                                contactPhone: AuthStore.shared.token == nil ? appState.contactPhone : nil,
+                                stateCode: submission.stateCode,
+                                addressLine1: submission.addressLine1,
+                                addressLine2: submission.addressLine2.isEmpty ? nil : submission.addressLine2,
+                                city: submission.city,
+                                zip: submission.zip,
+                                propertyType: submission.propertyTypeRaw,
+                                yearBuilt: submission.yearBuilt,
+                                beds: submission.beds,
+                                baths: submission.baths,
+                                sqftEst: submission.sqftEst,
+                                conditionScore: submission.conditionScore,
+                                repairNotes: submission.repairNotes,
+                                occupancy: submission.occupancyRaw,
+                                timeline: submission.timelineRaw,
+                                askingAmountCents: submission.askingAmountCents,
+                                flagInherited: submission.flagInherited,
+                                flagProbate: submission.flagProbate,
+                                flagBehindOnPayments: submission.flagBehindOnPayments,
+                                flagTaxOrLien: submission.flagTaxOrLien,
+                                flagCodeViolation: submission.flagCodeViolation,
+                            )
+                            let resp = try await APIClient.shared.submit(body)
+                            if let token = resp.token { AuthStore.shared.store(token: token) }
+                            if appState.userId == nil { appState.completeAuthentication(userId: resp.userId) }
+                        } catch {
+                            print("submit API failed: \(error)")
+                        }
+                    }
                     showingWizard = false
                 }
             }
@@ -39,6 +83,8 @@ struct SubmitFlowView: View {
 /// Stage-1 wizard — one screen with all fields for a buildable skeleton.
 /// Stage-4 polish will split this into proper paged wizard steps.
 struct SubmitWizardView: View {
+    let defaultEmail: String?
+    let defaultPhone: String?
     let onComplete: (PropertySubmission) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var submission = PropertySubmission()

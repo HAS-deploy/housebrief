@@ -33,7 +33,12 @@ struct SettingsView: View {
                                 isPresented: $showDeleteConfirm,
                                 titleVisibility: .visible) {
                 Button("Delete everything", role: .destructive) {
-                    appState.signOut()
+                    Task { @MainActor in
+                        // Best-effort server delete; always sign out locally even if network fails.
+                        _ = try? await APIClient.shared.deleteAccount()
+                        AuthStore.shared.clear()
+                        appState.signOut()
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
