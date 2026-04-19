@@ -1,0 +1,14 @@
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+HouseBrief.xcodeproj/
+.swiftpm/
+Pods/
+.env
+.env.local
+*.p8
+*.p12
+*.mobileprovision
