@@ -14,7 +14,10 @@ struct SubmitFlowView: View {
                     .font(.body).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.center)
-                Button("Start a submission") { showingWizard = true }
+                Button("Start a submission") {
+                    showingWizard = true
+                    PortfolioAnalytics.shared.track("submission.started")
+                }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
@@ -37,6 +40,16 @@ struct SubmitFlowView: View {
                     context.insert(submission)
                     try? context.save()
 
+                    PortfolioAnalytics.shared.track("submission.submitted", [
+                        "state_code": submission.stateCode,
+                        "occupancy": submission.occupancyRaw,
+                        "timeline_bucket": submission.timelineRaw,
+                        "has_inherited": submission.flagInherited,
+                        "has_probate": submission.flagProbate,
+                        "has_behind_payments": submission.flagBehindOnPayments,
+                        "has_tax_lien": submission.flagTaxOrLien,
+                        "has_code_violation": submission.flagCodeViolation,
+                    ])
                     // Fire API. If it succeeds, keep the returned server id on
                     // the local record. If it fails, SwiftData record still
                     // exists and we surface an error.
@@ -114,8 +127,16 @@ struct SubmitWizardView: View {
                     TextField("City", text: $submission.city)
                     TextField("State (e.g. TX)", text: $submission.stateCode)
                         .textCase(.uppercase)
-                        .onChange(of: submission.stateCode) { _, v in
+                        .onChange(of: submission.stateCode) { oldValue, v in
                             submission.stateCode = String(v.uppercased().prefix(2))
+                            // Fire blocked-state event when a fully-typed code
+                            // is not a launch state. This is a funnel-death signal.
+                            if submission.stateCode.count == 2 && submission.stateCode != oldValue.uppercased()
+                                && !StateRulesEngine.canSubmit(stateCode: submission.stateCode) {
+                                PortfolioAnalytics.shared.track("submission.blocked_state", [
+                                    "state_code": submission.stateCode,
+                                ])
+                            }
                         }
                     TextField("ZIP", text: $submission.zip)
                         .keyboardType(.numberPad)
