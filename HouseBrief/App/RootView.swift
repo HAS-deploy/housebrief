@@ -19,15 +19,19 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             SubmitFlowView()
+                .trackScreen("submit")
                 .tabItem { Label("Submit", systemImage: "plus.circle.fill") }
 
             PropertiesListView()
+                .trackScreen("properties")
                 .tabItem { Label("My Properties", systemImage: "house.fill") }
 
             MessagesListView()
+                .trackScreen("messages")
                 .tabItem { Label("Messages", systemImage: "envelope.fill") }
 
             SettingsView()
+                .trackScreen("settings")
                 .tabItem { Label("Settings", systemImage: "gear") }
         }
     }

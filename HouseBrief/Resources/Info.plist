@@ -27,7 +27,7 @@
 	<key>PostHogHost</key>
 	<string>https://us.i.posthog.com</string>
 	<key>PostHogKey</key>
-	<string></string>
+	<string>phc_zsZ6KoWfgoUyVnJEjKi5KC6CuS66xnyQgradTRmqc52s</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

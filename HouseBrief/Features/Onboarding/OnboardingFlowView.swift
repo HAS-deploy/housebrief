@@ -18,12 +18,16 @@ struct OnboardingFlowView: View {
                 // Mark onboarding done but do NOT issue a user id yet —
                 // the server will mint one during the first submit and
                 // we'll store it from the response (APIClient + SubmitFlowView).
+                PortfolioAnalytics.shared.track(PortfolioEvent.onboardingCompleted)
                 appState.finishOnboarding(email: email, phone: phone)
             }
             .tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .indexViewStyle(.page(backgroundDisplayMode: .always))
+        .onAppear {
+            PortfolioAnalytics.shared.track(PortfolioEvent.onboardingStarted)
+        }
     }
 }
 
