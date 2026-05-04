@@ -3,6 +3,11 @@ import SwiftUI
 struct OnboardingFlowView: View {
     @EnvironmentObject private var appState: AppState
     @State private var page = 0
+    @State private var startedAt: Date = Date()
+    @State private var stepEnteredAt: Date = Date()
+
+    private static let stepNames = ["intro", "principal", "contact"]
+    private static let stepTotal = stepNames.count
 
     var body: some View {
         TabView(selection: $page) {
@@ -18,7 +23,10 @@ struct OnboardingFlowView: View {
                 // Mark onboarding done but do NOT issue a user id yet —
                 // the server will mint one during the first submit and
                 // we'll store it from the response (APIClient + SubmitFlowView).
-                PortfolioAnalytics.shared.track(PortfolioEvent.onboardingCompleted)
+                PortfolioAnalytics.shared.track(PortfolioEvent.onboardingCompleted, [
+                    "total_seconds": Int(Date().timeIntervalSince(startedAt)),
+                    "steps_skipped": 0,
+                ])
                 appState.finishOnboarding(email: email, phone: phone)
             }
             .tag(2)
@@ -26,8 +34,34 @@ struct OnboardingFlowView: View {
         .tabViewStyle(.page(indexDisplayMode: .always))
         .indexViewStyle(.page(backgroundDisplayMode: .always))
         .onAppear {
+            startedAt = Date()
+            stepEnteredAt = startedAt
             PortfolioAnalytics.shared.track(PortfolioEvent.onboardingStarted)
+            trackViewed(page: 0)
         }
+        .onChange(of: page) { oldValue, newValue in
+            let now = Date()
+            PortfolioAnalytics.shared.track(PortfolioEvent.onboardingAdvanced, [
+                "from_step": Self.stepName(oldValue),
+                "to_step": Self.stepName(newValue),
+                "seconds_on_step": Int(now.timeIntervalSince(stepEnteredAt)),
+            ])
+            stepEnteredAt = now
+            trackViewed(page: newValue)
+        }
+    }
+
+    private func trackViewed(page: Int) {
+        PortfolioAnalytics.shared.track(PortfolioEvent.onboardingViewed, [
+            "step": Self.stepName(page),
+            "step_index": page,
+            "step_total": Self.stepTotal,
+        ])
+    }
+
+    private static func stepName(_ index: Int) -> String {
+        guard index >= 0, index < stepNames.count else { return "unknown" }
+        return stepNames[index]
     }
 }
 

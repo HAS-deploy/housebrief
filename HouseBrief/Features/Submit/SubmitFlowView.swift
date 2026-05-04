@@ -5,6 +5,7 @@ struct SubmitFlowView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.modelContext) private var context
     @State private var showingWizard = false
+    @State private var submitSuccessTrigger = 0
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,7 @@ struct SubmitFlowView: View {
                     // is slow.
                     context.insert(submission)
                     try? context.save()
+                    submitSuccessTrigger &+= 1
 
                     PortfolioAnalytics.shared.track("submission.submitted", [
                         "state_code": submission.stateCode,
@@ -89,6 +91,7 @@ struct SubmitFlowView: View {
                     showingWizard = false
                 }
             }
+            .sensoryFeedback(.success, trigger: submitSuccessTrigger)
         }
     }
 }
