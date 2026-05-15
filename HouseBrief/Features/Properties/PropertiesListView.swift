@@ -3,6 +3,8 @@ import SwiftData
 
 struct PropertiesListView: View {
     @Query(sort: \PropertySubmission.createdAt, order: .reverse) private var submissions: [PropertySubmission]
+    @Environment(\.modelContext) private var context
+    @State private var refreshError: String?
 
     var body: some View {
         NavigationStack {
@@ -30,9 +32,45 @@ struct PropertiesListView: View {
                             }
                         }
                     }
+                    .refreshable {
+                        // H2: pull-to-refresh reconciles server statuses
+                        // back to local records by remoteId. Without this
+                        // the user is stuck at .submitted forever.
+                        await refreshStatuses()
+                    }
                 }
             }
             .navigationTitle("My Properties")
+            .task {
+                // Also reconcile on first appearance so users see status
+                // movement without having to discover pull-to-refresh.
+                await refreshStatuses()
+            }
+        }
+    }
+
+    @MainActor
+    private func refreshStatuses() async {
+        guard AuthStore.shared.token != nil else { return }
+        do {
+            let resp = try await APIClient.shared.listMine()
+            // Build a lookup of remoteId -> server status.
+            var byRemote: [String: String] = [:]
+            for row in resp.submissions { byRemote[row.id] = row.status }
+            var changed = false
+            for s in submissions {
+                guard let rid = s.remoteId, let raw = byRemote[rid] else { continue }
+                if raw != s.statusRaw {
+                    s.statusRaw = raw
+                    s.updatedAt = .now
+                    changed = true
+                }
+            }
+            if changed { try? context.save() }
+            refreshError = nil
+        } catch {
+            refreshError = (error as? LocalizedError)?.errorDescription
+                ?? error.localizedDescription
         }
     }
 }

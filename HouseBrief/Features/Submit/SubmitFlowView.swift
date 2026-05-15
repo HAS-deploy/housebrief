@@ -7,6 +7,12 @@ struct SubmitFlowView: View {
     @State private var showingWizard = false
     @State private var submitSuccessTrigger = 0
 
+    // H1: in-flight submission state surfaced to the user. Until the server
+    // acks, the local record stays `.draft` and the wizard stays open so the
+    // user knows the lead has not landed yet.
+    @State private var submitting = false
+    @State private var submitError: String?
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
@@ -34,64 +40,86 @@ struct SubmitFlowView: View {
                 SubmitWizardView(
                     defaultEmail: appState.contactEmail,
                     defaultPhone: appState.contactPhone,
+                    submitting: submitting,
+                    submitError: submitError
                 ) { submission in
-                    // Local-first: persist to SwiftData right away so the user
-                    // sees the submission in My Properties even if the API call
-                    // is slow.
+                    // H1: persist to SwiftData as `.draft` and only flip to
+                    // `.submitted` after the API ack lands. Until then the
+                    // wizard stays presented and the user sees "Sending…" so
+                    // we don't lie about a lead that never reached the
+                    // acquisition team.
+                    submission.status = .draft
+                    submission.updatedAt = .now
                     context.insert(submission)
                     try? context.save()
-                    submitSuccessTrigger &+= 1
-
-                    PortfolioAnalytics.shared.track("submission.submitted", [
-                        "state_code": submission.stateCode,
-                        "occupancy": submission.occupancyRaw,
-                        "timeline_bucket": submission.timelineRaw,
-                        "has_inherited": submission.flagInherited,
-                        "has_probate": submission.flagProbate,
-                        "has_behind_payments": submission.flagBehindOnPayments,
-                        "has_tax_lien": submission.flagTaxOrLien,
-                        "has_code_violation": submission.flagCodeViolation,
-                    ])
-                    // Fire API. If it succeeds, keep the returned server id on
-                    // the local record. If it fails, SwiftData record still
-                    // exists and we surface an error.
-                    Task { @MainActor in
-                        do {
-                            let body = APIClient.SubmitBody(
-                                contactEmail: AuthStore.shared.token == nil ? appState.contactEmail : nil,
-                                contactPhone: AuthStore.shared.token == nil ? appState.contactPhone : nil,
-                                stateCode: submission.stateCode,
-                                addressLine1: submission.addressLine1,
-                                addressLine2: submission.addressLine2.isEmpty ? nil : submission.addressLine2,
-                                city: submission.city,
-                                zip: submission.zip,
-                                propertyType: submission.propertyTypeRaw,
-                                yearBuilt: submission.yearBuilt,
-                                beds: submission.beds,
-                                baths: submission.baths,
-                                sqftEst: submission.sqftEst,
-                                conditionScore: submission.conditionScore,
-                                repairNotes: submission.repairNotes,
-                                occupancy: submission.occupancyRaw,
-                                timeline: submission.timelineRaw,
-                                askingAmountCents: submission.askingAmountCents,
-                                flagInherited: submission.flagInherited,
-                                flagProbate: submission.flagProbate,
-                                flagBehindOnPayments: submission.flagBehindOnPayments,
-                                flagTaxOrLien: submission.flagTaxOrLien,
-                                flagCodeViolation: submission.flagCodeViolation,
-                            )
-                            let resp = try await APIClient.shared.submit(body)
-                            if let token = resp.token { AuthStore.shared.store(token: token) }
-                            if appState.userId == nil { appState.completeAuthentication(userId: resp.userId) }
-                        } catch {
-                            print("submit API failed: \(error)")
-                        }
-                    }
-                    showingWizard = false
+                    Task { await sendSubmission(submission) }
                 }
             }
             .sensoryFeedback(.success, trigger: submitSuccessTrigger)
+        }
+    }
+
+    @MainActor
+    private func sendSubmission(_ submission: PropertySubmission) async {
+        submitting = true
+        submitError = nil
+        defer { submitting = false }
+
+        PortfolioAnalytics.shared.track("submission.submitted", [
+            "state_code": submission.stateCode,
+            "occupancy": submission.occupancyRaw,
+            "timeline_bucket": submission.timelineRaw,
+            "has_inherited": submission.flagInherited,
+            "has_probate": submission.flagProbate,
+            "has_behind_payments": submission.flagBehindOnPayments,
+            "has_tax_lien": submission.flagTaxOrLien,
+            "has_code_violation": submission.flagCodeViolation,
+        ])
+
+        let body = APIClient.SubmitBody(
+            contactEmail: AuthStore.shared.token == nil ? appState.contactEmail : nil,
+            contactPhone: AuthStore.shared.token == nil ? appState.contactPhone : nil,
+            stateCode: submission.stateCode,
+            addressLine1: submission.addressLine1,
+            addressLine2: submission.addressLine2.isEmpty ? nil : submission.addressLine2,
+            city: submission.city,
+            zip: submission.zip,
+            propertyType: submission.propertyTypeRaw,
+            yearBuilt: submission.yearBuilt,
+            beds: submission.beds,
+            baths: submission.baths,
+            sqftEst: submission.sqftEst,
+            conditionScore: submission.conditionScore,
+            repairNotes: submission.repairNotes,
+            occupancy: submission.occupancyRaw,
+            timeline: submission.timelineRaw,
+            askingAmountCents: submission.askingAmountCents,
+            flagInherited: submission.flagInherited,
+            flagProbate: submission.flagProbate,
+            flagBehindOnPayments: submission.flagBehindOnPayments,
+            flagTaxOrLien: submission.flagTaxOrLien,
+            flagCodeViolation: submission.flagCodeViolation,
+        )
+        do {
+            let resp = try await APIClient.shared.submit(body)
+            if let token = resp.token { AuthStore.shared.store(token: token) }
+            if appState.userId == nil { appState.completeAuthentication(userId: resp.userId) }
+            // H2: persist the server submission id so we can reconcile
+            // status updates from listMine() back to this local record.
+            submission.remoteId = resp.submissionId
+            submission.status = .submitted
+            submission.updatedAt = .now
+            try? context.save()
+            submitSuccessTrigger &+= 1
+            showingWizard = false
+        } catch {
+            // H1: keep the wizard open, leave record as `.draft`, surface
+            // the failure with retry instead of pretending the lead landed.
+            submitError = (error as? LocalizedError)?.errorDescription
+                ?? error.localizedDescription
+            PortfolioAnalytics.shared.track("submission.failed", [
+                "state_code": submission.stateCode,
+            ])
         }
     }
 }
@@ -101,10 +129,13 @@ struct SubmitFlowView: View {
 struct SubmitWizardView: View {
     let defaultEmail: String?
     let defaultPhone: String?
+    let submitting: Bool
+    let submitError: String?
     let onComplete: (PropertySubmission) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var submission = PropertySubmission()
     @State private var acknowledged = Set<Int>()
+    @State private var showErrorAlert = false
 
     private var stateAllowed: Bool {
         submission.stateCode.count == 2
@@ -223,15 +254,58 @@ struct SubmitWizardView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
+                        .disabled(submitting)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Submit") {
-                        submission.status = .submitted
-                        submission.updatedAt = .now
-                        onComplete(submission)
+                    if submitting {
+                        ProgressView()
+                    } else {
+                        Button("Submit") {
+                            // H1: caller owns the draft -> submitted
+                            // transition. Until the server acks, this record
+                            // stays a draft and the wizard stays open.
+                            submission.updatedAt = .now
+                            onComplete(submission)
+                        }
+                        .disabled(!canSubmit)
                     }
-                    .disabled(!canSubmit)
                 }
+            }
+            .interactiveDismissDisabled(submitting)
+            .overlay {
+                if submitting {
+                    ZStack {
+                        Color.black.opacity(0.15).ignoresSafeArea()
+                        VStack(spacing: 12) {
+                            ProgressView()
+                            Text("Sending your submission…")
+                                .font(.callout)
+                        }
+                        .padding(24)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    }
+                }
+            }
+            .onChange(of: submitError) { _, newValue in
+                showErrorAlert = (newValue != nil)
+            }
+            .alert("Couldn't send submission",
+                   isPresented: $showErrorAlert,
+                   presenting: submitError) { _ in
+                Button("Retry") {
+                    // Re-submit the same record. Caller (SubmitFlowView)
+                    // re-runs the API call on the existing local draft.
+                    submission.updatedAt = .now
+                    onComplete(submission)
+                }
+                Button("Keep as draft", role: .cancel) {
+                    // Leave the local record as `.draft` and close the
+                    // wizard. The user can find it in My Properties and
+                    // retry later (future work).
+                    dismiss()
+                }
+            } message: { msg in
+                Text("\(msg)\n\nYour info is saved locally as a draft. Tap Retry to try again, or close and try later.")
             }
         }
     }

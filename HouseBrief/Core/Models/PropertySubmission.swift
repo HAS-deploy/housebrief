@@ -72,6 +72,10 @@ enum Timeline: String, Codable, CaseIterable, Identifiable {
 @Model
 final class PropertySubmission {
     @Attribute(.unique) var id: UUID
+    /// Server-side submission id, set after the API ack succeeds. Used to
+    /// reconcile status updates from `APIClient.listMine()` back to this
+    /// local record. Optional so old records (pre-H2) still load.
+    var remoteId: String?
     var createdAt: Date
     var updatedAt: Date
     var statusRaw: String
